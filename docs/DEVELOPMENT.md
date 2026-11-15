@@ -59,6 +59,7 @@ If the build fails:
 | `xcrun: error: invalid active developer path`, or `swift: command not found` | Install the Command Line Tools: `xcode-select --install` |
 | `package … is using Swift tools version 5.9.0 but the installed version is …` | Swift is older than 5.9. Update the Command Line Tools in System Settings → General → Software Update (or `softwareupdate --list`) |
 | `You have not agreed to the Xcode license agreements` | You have Xcode selected: `sudo xcodebuild -license accept`, or switch to the Command Line Tools with `sudo xcode-select -s /Library/Developer/CommandLineTools` |
+| `plugin for module 'SwiftUIMacros' not found` (followed by many `'self' is immutable` / `cannot find '$…' in scope` errors) | The newest SDK's SwiftUI makes `@State` a macro whose plugin the Command Line Tools don't ship. `build.sh` retries with the next older installed SDK automatically; to pick one yourself: `SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk ./build.sh` |
 | The old app keeps running after a rebuild | `build.sh` replaces the bundle but doesn't restart it. Quit CtxGraph and open it again — terminal tabs keep running and reattach |
 
 The build needs no network: SwiftTerm is vendored in `app/Vendor/`. It builds with Swift 5.9 and with Swift 6.1 (CI, macOS 15).

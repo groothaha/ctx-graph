@@ -9,10 +9,40 @@ APP="${OUT:-$HOME/Applications/CtxGraph.app}"   # OUT=... 로 다른 곳에 만�
 case "$APP" in /*) ;; *) APP="$PWD/$APP" ;; esac   # 상대 경로는 실행한 곳 기준 (아래에서 app/ 으로 cd 한다)
 
 cd "$ROOT/app"
+LOG="$(mktemp)"
+trap 'rm -f "$LOG"' EXIT
+build() {   # swift build 출력은 $LOG 에 모으고, 상태 코드를 돌려준다
+  swift build -c release >"$LOG" 2>&1
+}
+show_log() { grep -vE "PlatformPath|XCTest|show-sdk-platform-path" "$LOG" || true; }
+
+echo "Building (swift build -c release)…"
 set +e
-swift build -c release 2>&1 | grep -vE "PlatformPath|XCTest|show-sdk-platform-path"
-status=${PIPESTATUS[0]}
+build
+status=$?
 set -e
+# Command Line Tools 만 깔린 Mac 에서 새 SDK 의 SwiftUI 가 @State 를 macro 로 쓰는데
+# CLT 에 그 plugin(SwiftUIMacros)이 없으면 실패한다 → 설치된 이전 SDK 로 차례로 다시 시도.
+# SDKROOT 를 직접 지정했으면 건드리지 않는다.
+if [ "$status" -ne 0 ] && [ -z "${SDKROOT:-}" ] && grep -q "plugin for module 'SwiftUIMacros' not found" "$LOG"; then
+  CUR_SDK="$(cd -P "$(xcrun --show-sdk-path)" && pwd)"
+  SDK_DIR="$(dirname "$CUR_SDK")"
+  echo "The default SDK ($(basename "$CUR_SDK")) needs the SwiftUIMacros plugin, which these developer tools lack. Retrying with an older SDK…"
+  TRIED="$CUR_SDK"
+  for sdk in $(ls -d "$SDK_DIR"/MacOSX[0-9]*.sdk 2>/dev/null | sed -E 's/.*MacOSX([0-9.]+)\.sdk$/\1 &/' | sort -t. -k1,1nr -k2,2nr | cut -d' ' -f2); do
+    real="$(cd -P "$sdk" && pwd)"
+    case " $TRIED " in *" $real "*) continue ;; esac
+    TRIED="$TRIED $real"
+    echo "  → $(basename "$real")"
+    set +e
+    SDKROOT="$real" build
+    status=$?
+    set -e
+    [ "$status" -eq 0 ] && break
+    grep -q "plugin for module 'SwiftUIMacros' not found" "$LOG" || break   # 다른 이유로 실패하면 멈춤
+  done
+fi
+show_log
 [ "$status" -eq 0 ] || { echo "Build failed (swift build exit $status) — nothing was installed. See docs/DEVELOPMENT.md#building"; exit 1; }
 BIN="$ROOT/app/.build/release/CtxGraph"
 [ -x "$BIN" ] || { echo "Build failed: $BIN is missing"; exit 1; }
