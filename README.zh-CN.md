@@ -5,7 +5,7 @@
 <p align="center"><b>把 Claude Code 的对话用线连起来的 Mac 应用</b><br>
 从 A 向 B 画一条箭头，之后你在 B 里发的每条消息都会带上 A 的最新摘要。</p>
 
-<p align="center">macOS 14 及以上 · 免费开源（MIT）· 本地运行，无需服务器<br>
+<p align="center"><b>仅限 Mac</b>（macOS 14 及以上）· 免费开源（MIT）· 本地运行，无需服务器<br>
 <a href="README.md">English</a> · <a href="README.ko.md">한국어</a> · <a href="README.ja.md">日本語</a> · 简体中文</p>
 
 > 应用界面目前只有英文和韩文（macOS 语言为韩语时显示韩文，其他情况显示英文），暂无中文界面。
@@ -35,7 +35,7 @@
 
 ## 安装
 
-**要求：** macOS 14 及以上、[Claude Code](https://claude.com/claude-code)、Python 3.9 及以上（macOS 开发者工具自带的 `python3` 就够了——如果没有，应用会引导你安装）。
+**要求：** 运行 macOS 14 及以上的 Mac（没有 Windows 或 Linux 版）、[Claude Code](https://claude.com/claude-code)、Python 3.9 及以上（macOS 开发者工具自带的 `python3` 就够了——如果没有，应用会引导你安装）。
 
 **方式 1 —— 下载。** 从 [Releases](https://github.com/groothaha/ctx-graph/releases) 下载 `CtxGraph-<版本>.zip`，解压后把 `CtxGraph.app` 移到“应用程序”文件夹。
 CtxGraph **没有经过 Apple 公证**（公证需要付费的开发者账号），所以第一次打开时 macOS 会阻止。打开 **系统设置 → 隐私与安全性**，向下滚动，点 **仍要打开**；或者运行：

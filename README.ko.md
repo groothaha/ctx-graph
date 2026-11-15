@@ -5,7 +5,7 @@
 <p align="center"><b>Claude Code 대화끼리 맥락을 이어 주는 맥 앱</b><br>
 A 에서 B 로 화살표를 그으면, B 에서 보내는 메시지마다 A 의 최신 요약이 같이 들어가요.</p>
 
-<p align="center">macOS 14 이상 · 무료 오픈소스 (MIT) · 내 맥에서만 동작, 서버 없음<br>
+<p align="center"><b>맥 전용</b> (macOS 14 이상) · 무료 오픈소스 (MIT) · 내 맥에서만 동작, 서버 없음<br>
 <a href="README.md">English</a> · 한국어 · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a></p>
 
 ---
@@ -33,7 +33,7 @@ A 에서 B 로 화살표를 그으면, B 에서 보내는 메시지마다 A 의 
 
 ## 설치
 
-**필요한 것:** macOS 14 이상, [Claude Code](https://claude.com/claude-code), Python 3.9 이상 (맥 개발자 도구에 들어 있는 `python3` 면 충분해요 — 없으면 앱이 설치를 안내해요).
+**필요한 것:** macOS 14 이상인 맥 (윈도우·리눅스용은 없어요), [Claude Code](https://claude.com/claude-code), Python 3.9 이상 (맥 개발자 도구에 들어 있는 `python3` 면 충분해요 — 없으면 앱이 설치를 안내해요).
 
 **방법 1 — 내려받기.** [Releases](https://github.com/groothaha/ctx-graph/releases) 에서 `CtxGraph-<버전>.zip` 을 받아 풀고 `CtxGraph.app` 을 응용 프로그램 폴더로 옮겨요.
 CtxGraph 는 **애플 공증을 받지 않았어요** (유료 개발자 계정이 필요해서요). 그래서 처음엔 macOS 가 열기를 막아요. **시스템 설정 → 개인정보 보호 및 보안** 에서 아래로 내려 **그래도 열기** 를 누르거나, 터미널에서:

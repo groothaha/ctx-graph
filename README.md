@@ -2,10 +2,10 @@
 
 <h1 align="center">CtxGraph</h1>
 
-<p align="center"><b>Wire your Claude Code conversations together.</b><br>
+<p align="center"><b>A Mac app that wires your Claude Code conversations together.</b><br>
 Draw an arrow from A to B, and every message you send in B carries A's latest summary.</p>
 
-<p align="center">macOS 14+ · free & open source (MIT) · runs locally, no server<br>
+<p align="center"><b>macOS only</b> (14+) · free & open source (MIT) · runs locally, no server<br>
 English · <a href="README.ko.md">한국어</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a></p>
 
 ---
@@ -33,7 +33,7 @@ Conversations that don't send anywhere are never summarized. There is no server:
 
 ## Install
 
-**Requirements:** macOS 14 or later, [Claude Code](https://claude.com/claude-code), and Python 3.9+ (the `python3` that comes with the macOS developer tools is enough — the app offers to install them if missing).
+**Requirements:** a Mac with macOS 14 or later (there is no Windows or Linux version), [Claude Code](https://claude.com/claude-code), and Python 3.9+ (the `python3` that comes with the macOS developer tools is enough — the app offers to install them if missing).
 
 **Option 1 — download.** Get `CtxGraph-<version>.zip` from [Releases](https://github.com/groothaha/ctx-graph/releases), unzip, and move `CtxGraph.app` to Applications.
 CtxGraph is **not notarized** (that needs a paid Apple developer account), so the first time macOS will refuse to open it. Open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** — or run:
@@ -97,7 +97,7 @@ Settings → Claude Code → **Turn off (remove hooks)**, or `python3 -I ~/Libra
 
 **Does it slow Claude Code down?** For conversations that aren't in the graph the hook exits in about 45 ms. Summaries run in the background after a turn ends.
 
-**Windows / Linux?** Not at the moment — it's a SwiftUI app.
+**Windows / Linux?** Not at the moment — CtxGraph is a macOS-only SwiftUI app.
 
 ## Documentation
 

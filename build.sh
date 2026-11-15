@@ -23,6 +23,14 @@ ok()   { say "  ✓ $1" "  ✓ $2"; }
 bad()  { say "  ✗ $1" "  ✗ $2"; FAILED=1; }
 note() { say "  ! $1" "  ! $2"; }
 
+# 맥 전용: Linux·WSL·Git Bash 에서는 엉뚱한 오류 대신 바로 알려 준다
+os="$(uname -s)"
+if [ "$os" != Darwin ]; then
+  say "CtxGraph is a macOS app — it can't be built or run on $os (Windows and Linux aren't supported)." \
+      "CtxGraph 는 맥 전용 앱이에요 — $os 에서는 빌드하거나 실행할 수 없어요 (윈도우·리눅스는 지원 안 함)." >&2
+  exit 1
+fi
+
 version_ge() {   # "주.부" 비교: $1 >= $2
   local a1=${1%%.*} a2=${1#*.} b1=${2%%.*} b2=${2#*.}
   a2=${a2%%.*}; b2=${b2%%.*}

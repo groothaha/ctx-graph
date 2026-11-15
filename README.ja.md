@@ -5,7 +5,7 @@
 <p align="center"><b>Claude Code の会話どうしを線でつなぐ Mac アプリ</b><br>
 A から B へ矢印を引くと、B で送るメッセージごとに A の最新の要約が一緒に届きます。</p>
 
-<p align="center">macOS 14 以降 · 無料・オープンソース (MIT) · ローカルで動作、サーバー不要<br>
+<p align="center"><b>Mac 専用</b>（macOS 14 以降）· 無料・オープンソース (MIT) · ローカルで動作、サーバー不要<br>
 <a href="README.md">English</a> · <a href="README.ko.md">한국어</a> · 日本語 · <a href="README.zh-CN.md">简体中文</a></p>
 
 > アプリの表示言語は英語と韓国語です（macOS の言語設定が韓国語なら韓国語、それ以外は英語）。日本語 UI はまだありません。
@@ -35,7 +35,7 @@ A から B へ矢印を引くと、B で送るメッセージごとに A の最�
 
 ## インストール
 
-**必要なもの:** macOS 14 以降、[Claude Code](https://claude.com/claude-code)、Python 3.9 以降（macOS の開発者ツールに入っている `python3` で十分です。なければアプリがインストールを案内します）。
+**必要なもの:** macOS 14 以降の Mac（Windows・Linux 版はありません）、[Claude Code](https://claude.com/claude-code)、Python 3.9 以降（macOS の開発者ツールに入っている `python3` で十分です。なければアプリがインストールを案内します）。
 
 **方法 1 — ダウンロード。** [Releases](https://github.com/groothaha/ctx-graph/releases) から `CtxGraph-<バージョン>.zip` をダウンロードして展開し、`CtxGraph.app` を「アプリケーション」フォルダに移動します。
 CtxGraph は **Apple の公証を受けていません**（有料の開発者アカウントが必要なため）。そのため初回は macOS が開くのを拒否します。**システム設定 → プライバシーとセキュリティ** を下までスクロールして **このまま開く** をクリックするか、次を実行してください。
