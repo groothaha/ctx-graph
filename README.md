@@ -48,7 +48,7 @@ xattr -dr com.apple.quarantine /Applications/CtxGraph.app
 brew install --cask groothaha/tap/ctxgraph
 ```
 
-**Option 3 — build from source** (no Gatekeeper prompt; needs the Xcode Command Line Tools, ~1 min):
+**Option 3 — build from source** (no Gatekeeper prompt, ~1 min). Recommended: **Xcode** — the version in [`.xcode-version`](.xcode-version) is the one CI builds with; any Xcode 15 or later usually works. The Command Line Tools alone also work.
 
 ```sh
 git clone https://github.com/groothaha/ctx-graph && cd ctx-graph

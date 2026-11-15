@@ -33,7 +33,8 @@ jobs:
       matrix:
         include:
           - { os: macos-15, xcode: default, l10n: true }
-          - { os: macos-26, xcode: newest, l10n: false }
+          - { os: macos-26, xcode: pinned, l10n: false }    # 권장 버전 (.xcode-version)
+          - { os: macos-26, xcode: newest, l10n: false }    # 러너의 가장 새 Xcode — 다음에 깨질 걸 먼저 보기
           - { os: macos-26, xcode: clt, l10n: false }       # Xcode 없이 Command Line Tools 만 쓰는 사람
     runs-on: ${{ matrix.os }}
     steps:
@@ -41,8 +42,14 @@ jobs:
       - name: Pick Xcode
         if: matrix.xcode != 'default'
         run: |
-          if [ "${{ matrix.xcode }}" = clt ]; then sudo xcode-select -s /Library/Developer/CommandLineTools
-          else sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | grep -v -i beta | sort -V | tail -1)"; fi
+          case "${{ matrix.xcode }}" in
+            clt) sudo xcode-select -s /Library/Developer/CommandLineTools ;;
+            pinned)
+              X="/Applications/Xcode_$(tr -d '[:space:]' < .xcode-version).app"
+              [ -d "$X" ] || { echo "::error::$X isn't on this runner — update .xcode-version"; ls -d /Applications/Xcode*.app; exit 1; }
+              sudo xcode-select -s "$X" ;;
+            newest) sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | grep -v -i beta | sort -V | tail -1)" ;;
+          esac
           xcode-select -p
       - name: Build (release layout)
         run: |

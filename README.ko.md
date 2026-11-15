@@ -48,7 +48,7 @@ xattr -dr com.apple.quarantine /Applications/CtxGraph.app
 brew install --cask groothaha/tap/ctxgraph
 ```
 
-**방법 3 — 소스에서 빌드** (위 단계 없음, Xcode Command Line Tools 필요, 1분쯤):
+**방법 3 — 소스에서 빌드** (위 단계 없음, 1분쯤). 권장: **Xcode** — [`.xcode-version`](.xcode-version) 에 적힌 버전이 CI 가 빌드하는 버전이고, Xcode 15 이상이면 대개 돼요. Command Line Tools 만 있어도 빌드돼요.
 
 ```sh
 git clone https://github.com/groothaha/ctx-graph && cd ctx-graph

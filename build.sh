@@ -14,6 +14,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 APP="${OUT:-$HOME/Applications/CtxGraph.app}"   # OUT=... 로 다른 곳에 만들 수 있음 (시험용)
 case "$APP" in /*) ;; *) APP="$PWD/$APP" ;; esac   # 상대 경로는 실행한 곳 기준 (아래에서 app/ 으로 cd 한다)
 PREBUILT="brew install --cask groothaha/tap/ctxgraph"
+XCODE_PIN="$(tr -d '[:space:]' < "$ROOT/.xcode-version" 2>/dev/null || true)"   # 권장 Xcode (CI 가 이 버전으로 빌드)
 
 # 안내 문구는 터미널 언어가 한국어면 한국어로
 KO=0; case "${LC_ALL:-${LANG:-}}" in ko*) KO=1 ;; esac
@@ -54,6 +55,15 @@ preflight() {
   local dev
   if dev=$(xcode-select -p 2>/dev/null) && [ -d "$dev" ]; then
     ok "Developer tools: $dev" "개발자 도구: $dev"
+    local xv=""
+    [ -f "$dev/../Info.plist" ] && xv=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$dev/../Info.plist" 2>/dev/null || true)
+    if [ -z "$xv" ]; then
+      note "Command Line Tools only — this works, but Xcode ${XCODE_PIN:-} is the recommended toolchain" \
+           "Command Line Tools 만 있어요 — 빌드는 되지만 권장하는 건 Xcode ${XCODE_PIN:-} 이에요"
+    elif [ -n "$XCODE_PIN" ] && [ "$xv" != "$XCODE_PIN" ]; then
+      note "Xcode $xv — CI builds with Xcode $XCODE_PIN (.xcode-version); other versions usually work too" \
+           "Xcode $xv — CI 는 Xcode $XCODE_PIN (.xcode-version) 로 빌드해요; 다른 버전도 대개 돼요"
+    fi
   else
     bad "Xcode Command Line Tools are not installed" "Xcode Command Line Tools(개발자 도구)가 없어요"
     offer_clt_install
@@ -173,7 +183,7 @@ attempt() {   # $1 = DEVELOPER_DIR, $2 = SDKROOT (빈 값 = 지금 설정 그대
   env ${1:+"DEVELOPER_DIR=$1"} ${2:+"SDKROOT=$2"} swift build -c release >"$LOG" 2>&1
 }
 
-find_xcodes() {   # 설치된 Xcode 의 Developer 폴더, 새 버전 먼저 (CTXGRAPH_XCODES 로 바꿔 시험)
+find_xcodes() {   # 설치된 Xcode 의 Developer 폴더: 권장 버전(.xcode-version) 먼저, 그다음 새 버전부터 (CTXGRAPH_XCODES 로 바꿔 시험)
   if [ -n "${CTXGRAPH_XCODES+x}" ]; then printf '%s\n' "$CTXGRAPH_XCODES" | sed '/^$/d'; return 0; fi
   { ls -d /Applications/Xcode*.app "$HOME"/Applications/Xcode*.app 2>/dev/null || true
     mdfind "kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'" 2>/dev/null || true; } |
@@ -181,7 +191,8 @@ find_xcodes() {   # 설치된 Xcode 의 Developer 폴더, 새 버전 먼저 (CTX
     [ -d "$x/Contents/Developer" ] || continue
     v=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$x/Contents/Info.plist" 2>/dev/null) || continue
     printf '%s\t%s\n' "$v" "$(cd -P "$x" && pwd)/Contents/Developer"
-  done | sort -t "$(printf '\t')" -k2,2 -u | sort -t. -k1,1nr -k2,2nr -k3,3nr | cut -f2
+  done | sort -t "$(printf '\t')" -k2,2 -u | sort -t. -k1,1nr -k2,2nr -k3,3nr |
+    awk -F'\t' -v pin="$XCODE_PIN" '$1 == pin { print $2; next } { rest[++n] = $2 } END { for (i = 1; i <= n; i++) print rest[i] }'
 }
 
 USE_DEV=""; USE_SDK=""
@@ -203,7 +214,7 @@ if [ "$status" -ne 0 ] && grep -q "$MACRO_ERR" "$LOG" && [ -z "${DEVELOPER_DIR:-
   say "These developer tools don't have the SwiftUI macro plugin (SwiftUIMacros) that the newest SDK needs. Trying other setups…" \
       "이 개발자 도구엔 새 SDK 가 쓰는 SwiftUI 매크로 플러그인(SwiftUIMacros)이 없어요. 다른 설정으로 해 볼게요…"
   FAILED_DEV="$(cd -P "${USE_DEV:-$(xcode-select -p)}" && pwd)"
-  # 1) 설치된 Xcode: 플러그인이 들어 있다. sudo xcode-select 없이 이 빌드에만 DEVELOPER_DIR 로 쓴다
+  # 1) 설치된 Xcode (권장 버전 먼저): 플러그인이 들어 있다. sudo xcode-select 없이 이 빌드에만 DEVELOPER_DIR 로 쓴다
   while IFS= read -r dev <&3; do
     [ -z "${CTXGRAPH_XCODES+x}" ] && [ "$(cd -P "$dev" 2>/dev/null && pwd)" = "$FAILED_DEV" ] && continue
     if ! env DEVELOPER_DIR="$dev" swift --version >/dev/null 2>&1; then

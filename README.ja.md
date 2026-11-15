@@ -50,7 +50,7 @@ xattr -dr com.apple.quarantine /Applications/CtxGraph.app
 brew install --cask groothaha/tap/ctxgraph
 ```
 
-**方法 3 — ソースからビルド**（Gatekeeper の確認なし。Xcode Command Line Tools が必要、1 分ほど）:
+**方法 3 — ソースからビルド**（Gatekeeper の確認なし、1 分ほど）。推奨は **Xcode** です。[`.xcode-version`](.xcode-version) のバージョンが CI でビルドしているもので、Xcode 15 以降ならたいてい動きます。Command Line Tools だけでもビルドできます。
 
 ```sh
 git clone https://github.com/groothaha/ctx-graph && cd ctx-graph

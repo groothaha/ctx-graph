@@ -50,7 +50,7 @@ xattr -dr com.apple.quarantine /Applications/CtxGraph.app
 brew install --cask groothaha/tap/ctxgraph
 ```
 
-**方式 3 —— 从源码构建**（不会出现 Gatekeeper 提示；需要 Xcode Command Line Tools，大约 1 分钟）：
+**方式 3 —— 从源码构建**（不会出现 Gatekeeper 提示，大约 1 分钟）。推荐使用 **Xcode**：[`.xcode-version`](.xcode-version) 里的版本就是 CI 构建所用的版本，Xcode 15 及以上一般都可以。只装 Command Line Tools 也能构建。
 
 ```sh
 git clone https://github.com/groothaha/ctx-graph && cd ctx-graph

@@ -42,7 +42,9 @@ Tunables at the top of `ctxgraph.py`: `SUMMARY_MODEL`, `COOLDOWN` (120 s), `QUIE
 
 ## Building
 
-Requires the Xcode Command Line Tools (Swift 5.9+); Xcode itself isn't needed. (With the newest SDKs the Command Line Tools can lack SwiftUI's macro plugin — `build.sh` then uses an installed Xcode or an older SDK, see below.)
+**Recommended: Xcode**, the version in [`.xcode-version`](../.xcode-version) — CI builds with it. Any Xcode 15 or later (Swift 5.9+) usually works; if yours can't run that version, use the newest one your macOS supports. `build.sh` uses whatever `xcode-select -p` points to (switch with `sudo xcode-select -s /Applications/Xcode.app`, or for one build `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./build.sh`).
+
+The Command Line Tools alone (Swift 5.9+) also work, without the 10+ GB Xcode download — but the newest SDKs can need SwiftUI's macro plugin, which only Xcode ships; `build.sh` then falls back as described below. When `.xcode-version` changes, update it to a version that the `macos-26` runners have (CI fails otherwise).
 
 ```sh
 ./build.sh                 # release layout → ~/Applications/CtxGraph.app
@@ -58,11 +60,11 @@ If the build fails, `build.sh` goes down this list and stops at the first setup 
 
 1. the setup that worked last time (`app/.build/.choice`);
 2. the active developer tools (`xcode-select -p`);
-3. when the error is the missing SwiftUI macro plugin: every installed Xcode, newest first, through `DEVELOPER_DIR` for this build only (no `sudo xcode-select`);
+3. when the error is the missing SwiftUI macro plugin: every installed Xcode — the `.xcode-version` one first, then newest first — through `DEVELOPER_DIR` for this build only (no `sudo xcode-select`);
 4. then the older SDKs that come with the Command Line Tools, newest first;
 5. run from a terminal, it offers to install the prebuilt release instead (`--prebuilt`; not with `DEV=1`).
 
-An explicit `DEVELOPER_DIR` or `SDKROOT` turns steps 3–4 off. `tools/test_build.sh` checks this chain with a fake `swift` (CI runs it with `SKIP_SDK=1`). CI also builds with the Command Line Tools alone, the default Xcode and the newest Xcode, every push and once a week.
+An explicit `DEVELOPER_DIR` or `SDKROOT` turns steps 3–4 off. `tools/test_build.sh` checks this chain with a fake `swift` (CI runs it with `SKIP_SDK=1`). CI builds with the `.xcode-version` Xcode, the runners' newest Xcode, the default Xcode of macOS 15 and the Command Line Tools alone, on every push and once a week.
 
 In the release layout the app unpacks `bin/` into `~/Library/Application Support/CtxGraph/bin` on launch (only when it changed), so the hook path stays the same when the app moves or updates. With `DEV=1`, `Info.plist` gets `CtxGraphSourceBin` pointing at this checkout.
 
@@ -76,7 +78,7 @@ If the build still fails:
 | `plugin for module 'SwiftUIMacros' not found`, followed by many `'self' is immutable` / `cannot find '$…' in scope` errors | With only the Command Line Tools, the newest SDK's SwiftUI makes `@State` a macro whose plugin ships only with Xcode (seen with CLT 27.2, Swift 6.4). `build.sh` handles it (see the list above); if nothing works, install Xcode from the App Store or use `./build.sh --prebuilt`. To force a setup: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./build.sh` or `SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk ./build.sh` |
 | The old app keeps running after a rebuild | `build.sh` replaces the bundle but doesn't restart it. Quit CtxGraph and open it again — terminal tabs keep running and reattach |
 
-The build needs no network: SwiftTerm is vendored in `app/Vendor/`. CI builds it with Xcode 16.4 (Swift 6.1) and the newest Xcode on macOS 26 (Swift 6.3); it also builds with the Command Line Tools for Swift 5.9 and, through the SDK fallback above, 6.4. `build.sh` prints the compiler output only when the build fails.
+The build needs no network: SwiftTerm is vendored in `app/Vendor/`. Known to build with Xcode 16.4 and 26.6, the Command Line Tools for Swift 5.9 and 6.3, and — through the SDK fallback — 6.4. `build.sh` prints the compiler output only when the build fails.
 
 Python runtime: Homebrew's `python3`, then `/usr/local/bin`, then `/usr/bin/python3` *only if* `xcode-select -p` has a toolchain with Python (otherwise running it would pop up the developer-tools installer), then `~/.local/bin`. `CTXGRAPH_PYTHON` overrides.
 
