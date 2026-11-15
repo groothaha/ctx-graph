@@ -7,6 +7,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import time
 import unittest
 from pathlib import Path
 
@@ -192,9 +193,12 @@ class MigrationStepTest(unittest.TestCase):
         with self.assertRaises(sqlite3.OperationalError):     # 다른 오류는 다시 하지 않는다
             self.mod.set_wal(Flaky(1, "disk I/O error"))
         stuck = Flaky(10**6)
+        t0 = time.monotonic()
         with self.assertRaises(sqlite3.OperationalError):     # 끝까지 잠겨 있으면 포기
-            self.mod.set_wal(stuck, wait=0.2)
-        self.assertGreater(stuck.calls, 2)
+            self.mod.set_wal(stuck, wait=1.0)
+        # 몇 번 다시 했는지는 러너 속도에 달렸다 (느린 CI 는 sleep 이 길어져 2번에 그친 적 있음) — 다시 했는지와 제때 멈췄는지만
+        self.assertGreaterEqual(stuck.calls, 2)
+        self.assertLess(time.monotonic() - t0, 3.0)
 
     def test_failed_step_rolls_back(self):
         v = self.mod.SCHEMA_VERSION + 1
