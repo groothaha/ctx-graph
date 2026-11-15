@@ -19,11 +19,11 @@
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>ko</string>
+	<string>en</string>
 	<key>CFBundleLocalizations</key>
 	<array>
-		<string>ko</string>
 		<string>en</string>
+		<string>ko</string>
 	</array>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 groothaha · MIT License</string>
