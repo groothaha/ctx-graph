@@ -138,7 +138,7 @@ The backend follows the app: the app passes `CTXGRAPH_LANG`, `ctxgraph.py` store
 
 ## Releasing
 
-1. Bump `CFBundleShortVersionString` in `app/Info.plist` and `VERSION` in `bin/ctxgraph.py` (a test checks they match).
+1. Bump `CFBundleShortVersionString` (and the build number `CFBundleVersion`) in `app/Info.plist` and `VERSION` in `bin/ctxgraph.py` (a test checks they match). Edit the plist as text — `PlistBuddy` re-sorts every key.
 2. `cd tests && python3 -m unittest discover -s . -t .`
 3. `OUT=dist/CtxGraph.app ./build.sh && cd dist && ditto -c -k --keepParent CtxGraph.app CtxGraph-<version>.zip && shasum -a 256 CtxGraph-<version>.zip`
 4. Create a GitHub release with the zip; update `version` and `sha256` in `packaging/homebrew/ctxgraph.rb` and copy it to the tap repository (`groothaha/homebrew-tap`, `Casks/ctxgraph.rb`).
