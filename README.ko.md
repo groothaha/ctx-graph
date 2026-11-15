@@ -55,7 +55,7 @@ git clone https://github.com/groothaha/ctx-graph && cd ctx-graph
 ./build.sh            # → ~/Applications/CtxGraph.app
 ```
 
-`build.sh` 는 먼저 필요한 것(macOS 14 이상, Command Line Tools, Swift 5.9 이상, Python, Claude Code)을 확인하고, 개발자 도구가 없으면 설치 창을 띄울지 물어봐요. 확인만 하려면 `./build.sh --check`. 그래도 빌드가 안 되면 개발 문서의 [Building](docs/DEVELOPMENT.md#building) (영어) 을 보세요.
+`build.sh` 는 먼저 필요한 것(macOS 14 이상, Command Line Tools, Swift 5.9 이상, Python, Claude Code)을 확인하고, 개발자 도구가 없으면 설치 창을 띄울지 물어봐요. 확인만 하려면 `./build.sh --check`. 빌드가 안 되면(예: 최신 SDK 가 쓰는 플러그인이 Command Line Tools 에 없을 때) 설치된 Xcode 와 이전 SDK 로 다시 해 보고, 그래도 안 되면 미리 빌드된 앱을 대신 설치할지 물어봐요 (`./build.sh --prebuilt` 는 바로 설치). 자세한 건 [Building](docs/DEVELOPMENT.md#building) (영어).
 
 ## 처음 켜면
 

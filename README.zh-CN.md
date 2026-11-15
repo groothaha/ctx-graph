@@ -57,7 +57,7 @@ git clone https://github.com/groothaha/ctx-graph && cd ctx-graph
 ./build.sh            # → ~/Applications/CtxGraph.app
 ```
 
-`build.sh` 会先检查所需环境（macOS 14 及以上、Command Line Tools、Swift 5.9 及以上、Python、Claude Code），缺少 Command Line Tools 时会询问是否安装。只想检查可以运行 `./build.sh --check`。仍然构建失败时请看 [DEVELOPMENT.md 的 Building 一节](docs/DEVELOPMENT.md#building)（英文）。
+`build.sh` 会先检查所需环境（macOS 14 及以上、Command Line Tools、Swift 5.9 及以上、Python、Claude Code），缺少 Command Line Tools 时会询问是否安装。只想检查可以运行 `./build.sh --check`。如果构建失败（例如最新 SDK 需要的插件不在 Command Line Tools 里），它会改用已安装的 Xcode 和较旧的 SDK 重试，仍不行时会询问是否改为安装预先构建好的应用（`./build.sh --prebuilt` 直接安装）。详见 [DEVELOPMENT.md 的 Building 一节](docs/DEVELOPMENT.md#building)（英文）。
 
 ## 首次运行
 

@@ -55,7 +55,7 @@ git clone https://github.com/groothaha/ctx-graph && cd ctx-graph
 ./build.sh            # → ~/Applications/CtxGraph.app
 ```
 
-`build.sh` first checks what it needs (macOS 14+, the Command Line Tools, Swift 5.9+, Python, Claude Code) and offers to install the Command Line Tools if they are missing; `./build.sh --check` runs only that check. If the build still fails, see [Building](docs/DEVELOPMENT.md#building).
+`build.sh` first checks what it needs (macOS 14+, the Command Line Tools, Swift 5.9+, Python, Claude Code) and offers to install the Command Line Tools if they are missing; `./build.sh --check` runs only that check. If it can't build — for example the Command Line Tools lack a plugin that the newest SDK needs — it tries your installed Xcode and older SDKs, and finally offers to install the prebuilt release instead (`./build.sh --prebuilt` does that directly). Details: [Building](docs/DEVELOPMENT.md#building).
 
 ## First run
 

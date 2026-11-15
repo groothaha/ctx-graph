@@ -4,6 +4,8 @@
 #   DEV=1 ./build.sh    개발용: 이 저장소의 bin/ 을 바로 씀 (고치면 바로 반영 — 소스 폴더를 지우면 안 됨)
 #   OUT=<경로>          다른 곳에 만들기 (시험용)
 #   ./build.sh --check  빌드에 필요한 것만 확인 (macOS·개발자 도구·Swift·Python·Claude Code)
+#   ./build.sh --prebuilt  빌드하지 않고 GitHub Releases 의 앱을 받아 설치 (cask 의 sha256 으로 확인)
+#   빌드가 안 되면 차례로: 지난번에 된 설정 → 기본 → 설치된 Xcode(DEVELOPER_DIR) → 이전 SDK → (터미널이면) 미리 빌드된 앱 제안
 # macOS 기본 bash 3.2 로 돈다 (연관 배열·${x,,} 같은 4.x 문법 쓰지 말 것)
 # `sh build.sh`·`zsh build.sh` 로 실행해도 bash 로 다시 (PIPESTATUS·local 은 bash 문법)
 if [ -z "${BASH_VERSION:-}" ]; then exec /bin/bash "$0" "$@"; fi
@@ -97,79 +99,153 @@ preflight() {
   return "$FAILED"
 }
 
-if [ "${1:-}" = "--check" ]; then
-  if preflight; then say "Ready to build: ./build.sh" "빌드할 준비가 됐어요: ./build.sh"; exit 0; fi
-  exit 1
-fi
+# ── 미리 빌드된 앱: GitHub Releases 에서 받아 저장소의 Homebrew cask 에 적힌 sha256 으로 확인 ──
+install_prebuilt() {
+  local rb="$ROOT/packaging/homebrew/ctxgraph.rb" ver sha url tmp got
+  ver=$(sed -n 's/^ *version "\([^"]*\)".*/\1/p' "$rb" | head -1)
+  sha=$(sed -n 's/^ *sha256 "\([0-9a-f]*\)".*/\1/p' "$rb" | head -1)
+  if [ -z "$ver" ] || [ -z "$sha" ]; then say "Can't read the release version from $rb" "$rb 에서 릴리스 버전을 읽지 못했어요"; return 1; fi
+  url="${CTXGRAPH_RELEASES:-https://github.com/groothaha/ctx-graph/releases/download}/v$ver/CtxGraph-$ver.zip"
+  tmp=$(mktemp -d -t ctxgraph-prebuilt)
+  say "Downloading CtxGraph $ver: $url" "CtxGraph $ver 받는 중: $url"
+  if ! curl -fL --retry 2 --progress-bar -o "$tmp/app.zip" "$url"; then
+    rm -rf "$tmp"; say "Download failed." "내려받지 못했어요."; return 1
+  fi
+  got=$(shasum -a 256 "$tmp/app.zip" | cut -d' ' -f1)
+  if [ "$got" != "$sha" ]; then
+    rm -rf "$tmp"; say "Checksum mismatch — not installing (expected $sha, got $got)" "체크섬이 달라 설치하지 않아요 (예상 $sha, 받은 것 $got)"; return 1
+  fi
+  if ! ditto -x -k "$tmp/app.zip" "$tmp/x" || [ ! -d "$tmp/x/CtxGraph.app" ]; then
+    rm -rf "$tmp"; say "The download has no CtxGraph.app" "받은 파일에 CtxGraph.app 이 없어요"; return 1
+  fi
+  mkdir -p "$(dirname "$APP")"; rm -rf "$APP"; mv "$tmp/x/CtxGraph.app" "$APP"; rm -rf "$tmp"
+  say "Installed the prebuilt CtxGraph $ver (checksum verified): $APP" "미리 빌드된 CtxGraph $ver 버전을 설치했어요 (체크섬 확인): $APP"
+  say "  It is the $ver release, so changes made in this checkout after it aren't included." "  $ver 릴리스라서 그 뒤에 이 소스에 생긴 변경은 들어 있지 않아요."
+}
+
+# 빌드가 끝내 안 되면: 터미널에서 직접 실행했으면 미리 빌드된 앱을 설치할지 묻는다 (개발용 DEV=1 은 소스가 필요해서 제외)
+offer_prebuilt() {
+  [ -z "${DEV:-}" ] || return 1
+  [ -t 0 ] && [ -z "${CI:-}" ] || return 1
+  printf '%s' "$(say "Install the prebuilt app from GitHub Releases instead? [Y/n] " "대신 GitHub Releases 의 미리 빌드된 앱을 설치할까요? [Y/n] ")"
+  local ans; read -r ans || ans=n
+  case "$ans" in [nN]*) return 1 ;; esac
+  install_prebuilt
+}
+
+case "${1:-}" in
+  --check)
+    if preflight; then say "Ready to build: ./build.sh" "빌드할 준비가 됐어요: ./build.sh"; exit 0; fi
+    exit 1 ;;
+  --prebuilt)
+    [ -z "${DEV:-}" ] || { say "DEV=1 needs a build from source." "DEV=1 은 소스에서 빌드해야 해요."; exit 1; }
+    install_prebuilt; exit $? ;;
+  "") ;;
+  *) say "Usage: ./build.sh [--check | --prebuilt]   (DEV=1, OUT=<path>)" "사용법: ./build.sh [--check | --prebuilt]   (DEV=1, OUT=<경로>)"; exit 2 ;;
+esac
 if ! preflight; then
-  say "Fix the items marked ✗, then run ./build.sh again — or install the prebuilt app: $PREBUILT" \
-      "✗ 표시를 해결한 뒤 ./build.sh 를 다시 실행하세요 — 미리 빌드된 앱을 설치해도 돼요: $PREBUILT"
+  say "Fix the items marked ✗ and run ./build.sh again — or install the prebuilt app: ./build.sh --prebuilt" \
+      "✗ 표시를 해결하고 ./build.sh 를 다시 실행하세요 — 미리 빌드된 앱을 설치해도 돼요: ./build.sh --prebuilt"
   exit 1
 fi
 
 cd "$ROOT/app"
-# 개발자 도구(Swift)가 바뀌면 예전 빌드 캐시가 'module compiled with Swift …' 같은 오류를 내므로 비운다
-STAMP="$ROOT/app/.build/.toolchain"
-TOOLCHAIN="$(xcode-select -p) $(swift --version 2>/dev/null | head -1)"
-if [ -f "$STAMP" ] && [ "$(cat "$STAMP")" != "$TOOLCHAIN" ]; then
-  say "The Swift toolchain changed — clearing the old build cache" "Swift 가 바뀌어서 예전 빌드 캐시를 지워요"
-  rm -rf "$ROOT/app/.build"
-fi
-# 출력은 $LOG 에 모았다가 끝나고 보여 준다 (아래 SDK 바꿔 다시 하기에서 실패한 첫 시도가 화면을 덮지 않게)
+mkdir -p "$ROOT/app/.build"
+# 출력은 $LOG 에 모았다가 실패했을 때만 보여 준다 (다른 설정으로 다시 할 때 실패한 시도가 화면을 덮지 않게)
 LOG="$(mktemp -t ctxgraph-build)"
 trap 'rm -f "$LOG"' EXIT
-build() {   # $1 = 쓸 SDK (비우면 기본 — 사용자가 SDKROOT 를 정했으면 그것)
-  if [ -n "${1:-}" ]; then SDKROOT="$1" swift build -c release >"$LOG" 2>&1
-  else swift build -c release >"$LOG" 2>&1; fi
-}
-show_log() { grep -vE "PlatformPath|XCTest|show-sdk-platform-path" "$LOG" || true; }
-
-# Command Line Tools 만 있는 Mac: 가장 새 SDK 의 SwiftUI 는 @State 를 매크로로 쓰는데 그 플러그인(SwiftUIMacros)은
-# Xcode 에만 있다 → 설치된 이전 SDK 로 차례로 다시. 된 SDK 는 기억해 다음부터 바로 쓴다 (개발자 도구가 바뀌면 .build 와 함께 지워짐).
-# SDKROOT 를 직접 정했으면 건드리지 않는다. (PR #1 에서 찾은 문제: macOS 27.2 + CLT 27.2, Swift 6.4.2)
+STAMP="$ROOT/app/.build/.toolchain"   # 이 캐시를 만든 개발자 도구·SDK·Swift
+CHOICE="$ROOT/app/.build/.choice"     # 기본 설정으로 안 됐을 때 된 조합 "DEVELOPER_DIR|SDKROOT" — 다음부터 바로 쓴다
 MACRO_ERR="plugin for module 'SwiftUIMacros' not found"
-SDKFILE="$ROOT/app/.build/.sdkroot"
-USE_SDK=""
-if [ -z "${SDKROOT:-}" ] && [ -f "$SDKFILE" ] && [ -d "$(cat "$SDKFILE")" ]; then
-  USE_SDK="$(cat "$SDKFILE")"
-  say "Using $(basename "$USE_SDK") (the newest SDK that worked last time)" "$(basename "$USE_SDK") 로 빌드해요 (지난번에 된 SDK)"
-fi
-say "Building (about a minute the first time)…" "빌드 중 (처음엔 1분쯤)…"
-set +e; build "$USE_SDK"; status=$?; set -e
-if [ "$status" -ne 0 ] && [ -z "${SDKROOT:-}" ] && grep -q "$MACRO_ERR" "$LOG"; then
-  CUR="$(cd -P "${USE_SDK:-$(xcrun --show-sdk-path)}" && pwd)"
-  say "$(basename "$CUR") needs the SwiftUIMacros plugin, which only Xcode has. Trying the older SDKs that are installed…" \
-      "$(basename "$CUR") 는 Xcode 에만 있는 SwiftUIMacros 플러그인이 필요해요. 설치된 이전 SDK 로 다시 해 볼게요…"
-  TRIED=" $CUR "
-  for sdk in $(ls -d "$(dirname "$CUR")"/MacOSX[0-9]*.sdk 2>/dev/null | sed -E 's/.*MacOSX([0-9.]+)\.sdk$/\1 &/' | sort -t. -k1,1nr -k2,2nr | cut -d' ' -f2); do
-    real="$(cd -P "$sdk" && pwd)"
-    case "$TRIED" in *" $real "*) continue ;; esac   # 같은 SDK 를 가리키는 링크는 한 번만
-    TRIED="$TRIED$real "
-    say "  → $(basename "$real")" "  → $(basename "$real")"
-    set +e; build "$real"; status=$?; set -e
-    if [ "$status" -eq 0 ]; then printf '%s' "$real" > "$SDKFILE"; break; fi
-    grep -q "$MACRO_ERR" "$LOG" || break   # 다른 이유로 실패하면 거기서 멈춘다
-  done
-  if [ "$status" -ne 0 ] && grep -q "$MACRO_ERR" "$LOG"; then
-    show_log | tail -20
-    say "None of the installed SDKs builds with these Command Line Tools. Install Xcode (it has the plugin) and select it:" \
-        "설치된 SDK 중 이 Command Line Tools 로 빌드되는 게 없어요. Xcode 를 설치하고(플러그인이 들어 있음) 선택하세요:"
-    say "  sudo xcode-select -s /Applications/Xcode.app — or install the prebuilt app: $PREBUILT" \
-        "  sudo xcode-select -s /Applications/Xcode.app — 또는 미리 빌드된 앱: $PREBUILT"
-    exit 1
+show_log() { grep -vE "PlatformPath|XCTest|show-sdk-platform-path" "$LOG" || true; }
+toolchain_id() { printf '%s|%s|%s' "${1:-$(xcode-select -p)}" "$2" "$(env ${1:+"DEVELOPER_DIR=$1"} swift --version 2>/dev/null | head -1)"; }
+
+attempt() {   # $1 = DEVELOPER_DIR, $2 = SDKROOT (빈 값 = 지금 설정 그대로), $3 = 캐시 비울 때 알릴지
+  local id keep; id=$(toolchain_id "$1" "$2")
+  # 다른 컴파일러·SDK 로 만든 캐시는 'module compiled with Swift …' 같은 오류를 내므로 비운다 (고른 조합은 남김)
+  if [ -f "$STAMP" ] && [ "$(cat "$STAMP")" != "$id" ]; then
+    [ -n "${3:-}" ] && say "The Swift toolchain changed — clearing the old build cache" "Swift 가 바뀌어서 예전 빌드 캐시를 지워요"
+    keep=$(cat "$CHOICE" 2>/dev/null || true)
+    rm -rf "$ROOT/app/.build"; mkdir -p "$ROOT/app/.build"
+    [ -z "$keep" ] || printf '%s' "$keep" > "$CHOICE"
+  fi
+  printf '%s' "$id" > "$STAMP"
+  env ${1:+"DEVELOPER_DIR=$1"} ${2:+"SDKROOT=$2"} swift build -c release >"$LOG" 2>&1
+}
+
+find_xcodes() {   # 설치된 Xcode 의 Developer 폴더, 새 버전 먼저 (CTXGRAPH_XCODES 로 바꿔 시험)
+  if [ -n "${CTXGRAPH_XCODES+x}" ]; then printf '%s\n' "$CTXGRAPH_XCODES" | sed '/^$/d'; return 0; fi
+  { ls -d /Applications/Xcode*.app "$HOME"/Applications/Xcode*.app 2>/dev/null || true
+    mdfind "kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode'" 2>/dev/null || true; } |
+  while IFS= read -r x; do
+    [ -d "$x/Contents/Developer" ] || continue
+    v=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$x/Contents/Info.plist" 2>/dev/null) || continue
+    printf '%s\t%s\n' "$v" "$(cd -P "$x" && pwd)/Contents/Developer"
+  done | sort -t "$(printf '\t')" -k2,2 -u | sort -t. -k1,1nr -k2,2nr -k3,3nr | cut -f2
+}
+
+USE_DEV=""; USE_SDK=""
+if [ -z "${DEVELOPER_DIR:-}${SDKROOT:-}" ] && [ -f "$CHOICE" ]; then
+  IFS='|' read -r USE_DEV USE_SDK < "$CHOICE" || true
+  if { [ -n "$USE_DEV" ] && [ ! -d "$USE_DEV" ]; } || { [ -n "$USE_SDK" ] && [ ! -d "$USE_SDK" ]; }; then
+    USE_DEV=""; USE_SDK=""; rm -f "$CHOICE"
+  else
+    say "Using the setup that worked last time: ${USE_DEV:-$(xcode-select -p)}${USE_SDK:+ + $(basename "$USE_SDK")}" \
+        "지난번에 된 설정으로 빌드해요: ${USE_DEV:-$(xcode-select -p)}${USE_SDK:+ + $(basename "$USE_SDK")}"
   fi
 fi
+say "Building (about a minute the first time)…" "빌드 중 (처음엔 1분쯤)…"
+set +e; attempt "$USE_DEV" "$USE_SDK" announce; status=$?; set -e
+
+# Command Line Tools 만 있는 Mac: 가장 새 SDK 의 SwiftUI 는 @State 를 매크로로 쓰는데, 그 플러그인(SwiftUIMacros)은
+# Xcode 에만 있다 (PR #1: macOS 27.2 + CLT 27.2, Swift 6.4.2). 사용자가 DEVELOPER_DIR·SDKROOT 를 정했으면 건드리지 않는다.
+if [ "$status" -ne 0 ] && grep -q "$MACRO_ERR" "$LOG" && [ -z "${DEVELOPER_DIR:-}${SDKROOT:-}" ]; then
+  say "These developer tools don't have the SwiftUI macro plugin (SwiftUIMacros) that the newest SDK needs. Trying other setups…" \
+      "이 개발자 도구엔 새 SDK 가 쓰는 SwiftUI 매크로 플러그인(SwiftUIMacros)이 없어요. 다른 설정으로 해 볼게요…"
+  FAILED_DEV="$(cd -P "${USE_DEV:-$(xcode-select -p)}" && pwd)"
+  # 1) 설치된 Xcode: 플러그인이 들어 있다. sudo xcode-select 없이 이 빌드에만 DEVELOPER_DIR 로 쓴다
+  while IFS= read -r dev <&3; do
+    [ -z "${CTXGRAPH_XCODES+x}" ] && [ "$(cd -P "$dev" 2>/dev/null && pwd)" = "$FAILED_DEV" ] && continue
+    if ! env DEVELOPER_DIR="$dev" swift --version >/dev/null 2>&1; then
+      note "Skipping $dev — its license isn't accepted yet (sudo xcodebuild -license accept)" "$dev 는 건너뛰어요 — 라이선스 동의가 안 됨 (sudo xcodebuild -license accept)"
+      continue
+    fi
+    say "  → $dev" "  → $dev"
+    set +e; attempt "$dev" ""; status=$?; set -e
+    if [ "$status" -eq 0 ]; then printf '%s|' "$dev" > "$CHOICE"; break; fi
+    grep -q "$MACRO_ERR" "$LOG" || break   # 다른 이유로 실패하면 거기서 멈춘다
+  done 3< <(find_xcodes)
+  # 2) Command Line Tools 에 같이 들어 있는 이전 SDK (새 것부터)
+  if [ "$status" -ne 0 ] && grep -q "$MACRO_ERR" "$LOG"; then
+    CUR_SDK="$(cd -P "$(xcrun --show-sdk-path)" && pwd)"
+    TRIED=" $CUR_SDK "
+    while IFS= read -r sdk <&3; do
+      real="$(cd -P "$sdk" && pwd)"
+      case "$TRIED" in *" $real "*) continue ;; esac   # 같은 SDK 를 가리키는 링크는 한 번만
+      TRIED="$TRIED$real "
+      say "  → $(basename "$real")" "  → $(basename "$real")"
+      set +e; attempt "" "$real"; status=$?; set -e
+      if [ "$status" -eq 0 ]; then printf '|%s' "$real" > "$CHOICE"; break; fi
+      grep -q "$MACRO_ERR" "$LOG" || break
+    done 3< <(ls -d "$(dirname "$CUR_SDK")"/MacOSX[0-9]*.sdk 2>/dev/null | sed -E 's/.*MacOSX([0-9.]+)\.sdk$/\1 &/' | sort -t. -k1,1nr -k2,2nr | cut -d' ' -f2-)
+  fi
+fi
+
 if [ "$status" -ne 0 ]; then
-  show_log
+  show_log | tail -60
   say "Build failed (swift build exit $status) — nothing was installed." "빌드 실패 (swift build exit $status) — 아무것도 설치하지 않았어요."
-  say "  Known problems and fixes: docs/DEVELOPMENT.md#building — or install the prebuilt app: $PREBUILT" \
-      "  알려진 문제와 해결: docs/DEVELOPMENT.md#building — 미리 빌드된 앱을 설치해도 돼요: $PREBUILT"
+  if grep -q "$MACRO_ERR" "$LOG"; then
+    say "  No installed Xcode or SDK has the SwiftUI macro plugin. Installing Xcode (App Store) fixes this for good." \
+        "  설치된 Xcode·SDK 중 SwiftUI 매크로 플러그인이 있는 게 없어요. Xcode(App Store)를 설치하면 해결돼요."
+  fi
+  if offer_prebuilt; then exit 0; fi
+  say "  Known problems and fixes: docs/DEVELOPMENT.md#building — or install the prebuilt app: ./build.sh --prebuilt" \
+      "  알려진 문제와 해결: docs/DEVELOPMENT.md#building — 미리 빌드된 앱 설치: ./build.sh --prebuilt"
   exit 1
 fi
 grep -E "^Build complete" "$LOG" || true   # 성공하면 경고(대부분 SwiftTerm)는 감추고 끝 줄만
 BIN="$ROOT/app/.build/release/CtxGraph"
 [ -x "$BIN" ] || { say "Build failed: $BIN is missing" "빌드 실패: $BIN 이 없어요"; exit 1; }
-printf '%s' "$TOOLCHAIN" > "$STAMP"
 
 ICNS="$ROOT/app/AppIcon.icns"
 if [ ! -f "$ICNS" ]; then
