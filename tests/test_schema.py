@@ -176,6 +176,26 @@ class MigrationStepTest(unittest.TestCase):
         self.assertEqual(self.sb.q("PRAGMA user_version")[0][0], v)
         self.assertIn("pinned", columns(self.sb, "nodes"))
 
+    def test_wal_switch_retries_while_locked(self):
+        """처음 WAL 로 바꿀 때 바로 나는 'database is locked' 는 잠깐 뒤 다시 (CI 에서 8개 동시 열기 중 하나가 실패했었다)"""
+        class Flaky:
+            def __init__(self, fails, msg="database is locked"):
+                self.fails, self.msg, self.calls = fails, msg, 0
+
+            def execute(self, sql):
+                self.calls += 1
+                if self.calls <= self.fails:
+                    raise sqlite3.OperationalError(self.msg)
+        con = Flaky(3)
+        self.mod.set_wal(con)
+        self.assertEqual(con.calls, 4)
+        with self.assertRaises(sqlite3.OperationalError):     # 다른 오류는 다시 하지 않는다
+            self.mod.set_wal(Flaky(1, "disk I/O error"))
+        stuck = Flaky(10**6)
+        with self.assertRaises(sqlite3.OperationalError):     # 끝까지 잠겨 있으면 포기
+            self.mod.set_wal(stuck, wait=0.2)
+        self.assertGreater(stuck.calls, 2)
+
     def test_failed_step_rolls_back(self):
         v = self.mod.SCHEMA_VERSION + 1
 

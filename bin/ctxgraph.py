@@ -112,7 +112,7 @@ ORC_PATH = HOME / ".config" / "openrouter" / "or.zsh"
 ORC_KEY_PATH = HOME / ".config" / "openrouter" / "key"
 OPENROUTER_BASE = "https://openrouter.ai/api"
 
-VERSION = "0.1.0"           # 앱 Info.plist 의 CFBundleShortVersionString 과 같게 (tests/test_schema.py)
+VERSION = "0.1.1"           # 앱 Info.plist 의 CFBundleShortVersionString 과 같게 (tests/test_schema.py)
 
 # graph.sqlite 형식 번호 (PRAGMA user_version). 형식을 바꿀 때는 MIGRATIONS 에 단계를 더하고
 # 앱의 Schema.version (app/Sources/CtxGraph/Backend.swift) 도 같이 올린다 — tests/test_schema.py 가 확인함
@@ -257,6 +257,23 @@ def schema_version(con) -> int:
     return con.execute("PRAGMA user_version").fetchone()[0]
 
 
+def set_wal(con: sqlite3.Connection, wait: float = 10.0) -> None:
+    """WAL 로 바꾼다. 처음 바꾸는 순간(새 DB·옛 DB)엔 SQLite 가 busy_timeout 을 쓰지 않고 바로
+    'database is locked' 를 낼 때가 있다 — 훅 여러 개가 같은 순간 처음 열면 (CI 에서 8개 중 1개).
+    WAL 은 파일에 남는 설정이라 누군가 한 번 바꾸면 그 뒤로는 아무 일도 안 하므로, 잠깐씩 쉬며 다시 해 본다."""
+    deadline = time.monotonic() + wait
+    delay = 0.01 + (os.getpid() % 7) * 0.003      # 프로세스마다 조금씩 어긋나게
+    while True:
+        try:
+            con.execute("PRAGMA journal_mode=WAL")
+            return
+        except sqlite3.OperationalError as e:
+            if "locked" not in str(e) or time.monotonic() + delay > deadline:
+                raise
+            time.sleep(delay)
+            delay = min(delay * 2, 0.25)
+
+
 def connect(create: bool = True) -> sqlite3.Connection | None:
     if not create and not DB_PATH.exists():
         return None
@@ -269,7 +286,7 @@ def connect(create: bool = True) -> sqlite3.Connection | None:
         con.close()
         raise NewerSchema(v)
     try:
-        con.execute("PRAGMA journal_mode=WAL")
+        set_wal(con)
         con.executescript(SCHEMA)
         init_lang(con)
         migrate(con)
