@@ -1,0 +1,4 @@
+/* CtxGraph — build_strings.py 가 만듦 */
+"inspector.folder" = "폴더";
+"inspector.model" = "모델";
+"inspector.workspace" = "작업 공간";

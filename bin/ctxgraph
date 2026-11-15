@@ -1,0 +1,4 @@
+#!/bin/bash
+# CtxGraph 앱 터미널에서 쓰는 명령: ctxgraph notify "학습 끝" 등 (ctxgraph.py 와 같음)
+# ~/.local/bin/ctxgraph 는 이 파일로의 링크
+exec python3 -I "$(dirname "$(readlink -f "$0")")/ctxgraph.py" "$@"

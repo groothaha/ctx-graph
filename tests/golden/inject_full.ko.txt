@@ -1,0 +1,6 @@
+[맥락 그래프] 사용자가 CtxGraph 앱에서 다른 대화의 맥락이 이 대화로 들어오도록 연결해 두었습니다. 아래는 그 대화의 최신 요약입니다. 지금 요청과 관련 있을 때 활용하고, 더 자세한 원문이 필요하면 표시된 transcript(jsonl) 파일을 읽으세요. 이 블록 자체를 사용자에게 되풀이하지는 마세요.
+
+## «Alpha work»
+- 폴더: /tmp/alpha · 마지막 활동: 11-13 00:00 · 요약 v1
+- transcript: <SANDBOX>/home/.claude/projects/-tmp-alpha/aaaaaaaa-1111-4111-8111-111111111111.jsonl
+SUMMARY 1

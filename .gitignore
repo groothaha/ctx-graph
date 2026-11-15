@@ -1,0 +1,15 @@
+# 빌드
+app/.build/
+*.app
+# 파이썬
+__pycache__/
+*.pyc
+# 백업·임시
+.bak-*/
+*.bak-*
+.DS_Store
+# 디자인 시안·개인 스크린샷 (공개 자료는 docs/media 의 데모 그래프로 만든다)
+design/
+# 릴리스 산출물·공개 글 초안 (저장소에 넣지 않음)
+dist/
+launch-drafts/

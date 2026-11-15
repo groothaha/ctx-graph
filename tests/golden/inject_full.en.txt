@@ -1,0 +1,6 @@
+[Context graph] In the CtxGraph app, the user linked other conversations so their context flows into this one. Below are their latest summaries. Use them when relevant to the current request; for more detail, read the transcript (jsonl) file shown. Don't repeat this block back to the user.
+
+## «Alpha work»
+- folder: /tmp/alpha · last active: 11-13 00:00 · summary v1
+- transcript: <SANDBOX>/home/.claude/projects/-tmp-alpha/aaaaaaaa-1111-4111-8111-111111111111.jsonl
+SUMMARY 1

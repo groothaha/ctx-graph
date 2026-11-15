@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    # bin/ctxgraph.py 는 사용자의 Claude Code 훅으로 돈다: 맥에 기본으로 있는 python3(3.9)와 최신 파이썬 둘 다에서 시험
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["system", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - if: matrix.python != 'system'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Tests
+        run: |
+          PY=$([ "${{ matrix.python }}" = system ] && echo /usr/bin/python3 || echo python3)
+          $PY --version
+          cd tests && $PY -m unittest discover -s . -t . -v
+
+  app:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (release layout)
+        run: |
+          swift --version
+          OUT="$RUNNER_TEMP/CtxGraph.app" ./build.sh
+          test -x "$RUNNER_TEMP/CtxGraph.app/Contents/MacOS/CtxGraph"
+          test -f "$RUNNER_TEMP/CtxGraph.app/Contents/Resources/bin/ctxgraph.py"
+          test -f "$RUNNER_TEMP/CtxGraph.app/Contents/Resources/Fonts/D2Coding.ttf"
+          ! /usr/libexec/PlistBuddy -c "Print :CtxGraphSourceBin" "$RUNNER_TEMP/CtxGraph.app/Contents/Info.plist"
+      - name: Translations
+        run: |
+          # 컴파일러가 뽑은 번역 키와 en.py 를 맞춰 본다 (빠진 번역·형식 지정자 불일치면 실패)
+          cd app
+          mkdir -p "$RUNNER_TEMP/strings"   # 없으면 swift 가 .stringsdata 를 못 쓴다
+          swift build -c release --build-path "$RUNNER_TEMP/l10n" \
+            -Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc "$RUNNER_TEMP/strings"
+          python3 -B Localization/build_strings.py "$RUNNER_TEMP/strings"
