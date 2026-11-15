@@ -13,9 +13,9 @@ set +e
 swift build -c release 2>&1 | grep -vE "PlatformPath|XCTest|show-sdk-platform-path"
 status=${PIPESTATUS[0]}
 set -e
-[ "$status" -eq 0 ] || { echo "빌드 실패 (swift build exit $status) — 설치하지 않음"; exit 1; }
+[ "$status" -eq 0 ] || { echo "Build failed (swift build exit $status) — nothing was installed. See docs/DEVELOPMENT.md#building"; exit 1; }
 BIN="$ROOT/app/.build/release/CtxGraph"
-[ -x "$BIN" ] || { echo "빌드 실패"; exit 1; }
+[ -x "$BIN" ] || { echo "Build failed: $BIN is missing"; exit 1; }
 
 ICNS="$ROOT/app/AppIcon.icns"
 if [ ! -f "$ICNS" ]; then
@@ -56,4 +56,4 @@ if [ -n "${DEV:-}" ]; then
   /usr/libexec/PlistBuddy -c "Add :CtxGraphSourceBin string $ROOT/bin" "$APP/Contents/Info.plist"
 fi
 codesign --force --sign - "$APP" >/dev/null 2>&1
-echo "완료: $APP"
+echo "Built: $APP"

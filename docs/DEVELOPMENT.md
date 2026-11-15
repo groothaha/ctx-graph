@@ -6,7 +6,7 @@ Code comments are mostly Korean; this document and the user-facing docs are in E
 
 | Path | What |
 |---|---|
-| `app/Sources/CtxGraph/` | SwiftUI app: `GraphStore` (state + SQLite), `GraphCanvas` (graph), `Flow` (arrow states), `Peek` (arrow peek), `Panels` (sidebar, inspector), `Terminals` / `TermViews` (terminal tabs, splits, holders), `Onboarding`, `Settings`, `Theme` (color tokens), `Backend` (SQLite wrapper, Python runner) |
+| `app/Sources/CtxGraph/` | SwiftUI app: `GraphStore` (state + SQLite), `GraphCanvas` (graph, cards), `Traces` (how links are drawn: pins, right-angle routes around cards, chevrons, the grid), `Flow` (link states), `Peek` (hover preview of a link), `Preview` (the inspector's next-message preview), `Viewport` (zoom and pan), `ListDrag` (dragging from the sidebar), `Spaces` (workspaces), `Panels` (sidebar, inspector), `Terminals` / `TermViews` (terminal tabs, splits, holders), `Onboarding`, `Settings`, `Theme` (color tokens, app language), `Models` (paths, layout constants, data types), `Backend` (SQLite wrapper, Python runner) |
 | `app/Vendor/SwiftTerm/` | SwiftTerm v1.18.0 source, vendored so the app builds without Xcode (Metal shaders removed; small patches listed in `VENDORED.txt`) |
 | `app/Fonts/` | D2Coding (OFL) for the terminal |
 | `app/Localization/` | `en.py` (Korean key → English), `build_strings.py` (writes `en.lproj` / `ko.lproj`), `tools/` (coverage checks) |
@@ -21,8 +21,10 @@ Code comments are mostly Korean; this document and the user-facing docs are in E
 
 No server. The app and the hook script share `~/Library/Application Support/CtxGraph/graph.sqlite` (WAL mode).
 
-- **UserPromptSubmit hook** — if this conversation is a node, inject the summaries of its incoming arrows that it hasn't received yet as `additionalContext`: the full summary the first time, the delta when it is exactly one version behind, the full summary otherwise; a one-time notice when an arrow is removed. Budget: 9,000 characters. What was sent is recorded in `injections`. `ctxgraph.py preview <sid>` builds the same text without recording anything (`plan_injection` → `compose_injection`).
-- **Stop hook** — if the conversation has outgoing arrows and its transcript grew, spawn one background `summarize-job`, which waits for 20 s of quiet and 2 min since the previous summary, then runs `claude -p --model haiku --no-session-persistence --setting-sources project --tools ""` with `CTXGRAPH_INTERNAL=1` (so the hooks don't run inside it and the user's settings/plugins don't apply). Incremental: previous summary + new messages → `<summary>` and `<delta>`.
+A *link* (`links(src, dst)`) means src's summary goes into dst; two links in opposite directions share both ways. The UI calls a link an *arrow* in menus, and draws it as a line with chevrons pointing the way context flows.
+
+- **UserPromptSubmit hook** — if this conversation is a node, inject the summaries of its incoming links that it hasn't received yet as `additionalContext`: the full summary the first time, the delta when it is exactly one version behind, the full summary otherwise; a one-time notice when a link is removed. Budget: 9,000 characters. What was sent is recorded in `injections`. `ctxgraph.py preview <sid>` builds the same text without recording anything (`plan_injection` → `compose_injection`).
+- **Stop hook** — if the conversation has outgoing links and its transcript grew, spawn one background `summarize-job`, which waits for 20 s of quiet and 2 min since the previous summary, then runs `claude -p --model haiku --no-session-persistence --setting-sources project --tools ""` with `CTXGRAPH_INTERNAL=1` (so the hooks don't run inside it and the user's settings/plugins don't apply). Incremental: previous summary + new messages → `<summary>` and `<delta>`.
 - **SessionStart hook** (`resume`, `compact`) — forget what was received so the next message carries the full summary again.
 - **Notification / Stop** — terminal-tab notifications via `term_events`.
 - **PreToolUse** (`Edit|Write|MultiEdit|NotebookEdit`) — experimental work folders.
@@ -49,6 +51,17 @@ OUT=/tmp/x/CtxGraph.app ./build.sh    # build somewhere else
 ```
 
 In the release layout the app unpacks `bin/` into `~/Library/Application Support/CtxGraph/bin` on launch (only when it changed), so the hook path stays the same when the app moves or updates. With `DEV=1`, `Info.plist` gets `CtxGraphSourceBin` pointing at this checkout.
+
+If the build fails:
+
+| Symptom | Fix |
+|---|---|
+| `xcrun: error: invalid active developer path`, or `swift: command not found` | Install the Command Line Tools: `xcode-select --install` |
+| `package … is using Swift tools version 5.9.0 but the installed version is …` | Swift is older than 5.9. Update the Command Line Tools in System Settings → General → Software Update (or `softwareupdate --list`) |
+| `You have not agreed to the Xcode license agreements` | You have Xcode selected: `sudo xcodebuild -license accept`, or switch to the Command Line Tools with `sudo xcode-select -s /Library/Developer/CommandLineTools` |
+| The old app keeps running after a rebuild | `build.sh` replaces the bundle but doesn't restart it. Quit CtxGraph and open it again — terminal tabs keep running and reattach |
+
+The build needs no network: SwiftTerm is vendored in `app/Vendor/`. It builds with Swift 5.9 and with Swift 6.1 (CI, macOS 15).
 
 Python runtime: Homebrew's `python3`, then `/usr/local/bin`, then `/usr/bin/python3` *only if* `xcode-select -p` has a toolchain with Python (otherwise running it would pop up the developer-tools installer), then `~/.local/bin`. `CTXGRAPH_PYTHON` overrides.
 
@@ -107,7 +120,7 @@ open -n -g --env HOME=/tmp/demo/home --env CTXGRAPH_HOME=/tmp/demo/data --env CT
 python3 tools/compose_demo.py /tmp/rec docs/media/demo --lang en     # adds cursor + captions → .gif and .mp4
 ```
 
-The hover coordinates depend on the layout; find the arrow in a snapshot first.
+The hover coordinates depend on the layout; find a point on the line in a snapshot first.
 
 ## Localization
 
@@ -116,6 +129,10 @@ Korean strings are the keys. After adding UI text:
 1. Extract the keys the compiler actually uses (the output folder must exist): `mkdir -p /tmp/strings && swift build -c release --build-path /tmp/b -Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc /tmp/strings`
 2. `python3 app/Localization/build_strings.py /tmp/strings` lists missing translations and format-specifier mismatches; add them to `en.py` (plurals in `PLURALS`, context-dependent keys in `EXPLICIT`).
 3. `app/Localization/tools/README.md` describes the per-occurrence check that finds text in plain `String` contexts (wrap those in `String(localized:)`).
+
+The app's development region is `en`, so on a Mac whose languages include neither Korean nor English (for example only Japanese) the UI is English. Run in another language with `--args -AppleLanguages "(ja)"`.
+
+The README exists in English, Korean, Japanese and Simplified Chinese (`README*.md`); when you change it, update all four. The guide and this document are English only.
 
 The backend follows the app: the app passes `CTXGRAPH_LANG`, `ctxgraph.py` stores it in `settings.lang`, and hooks use it for summaries, injected text and messages (`tr(ko, en)`).
 

@@ -5,7 +5,8 @@
 <p align="center"><b>Claude Code 대화끼리 맥락을 이어 주는 맥 앱</b><br>
 A 에서 B 로 화살표를 그으면, B 에서 보내는 메시지마다 A 의 최신 요약이 같이 들어가요.</p>
 
-<p align="center">macOS 14 이상 · 무료 오픈소스 (MIT) · 내 맥에서만 동작, 서버 없음 · <a href="README.md">English</a></p>
+<p align="center">macOS 14 이상 · 무료 오픈소스 (MIT) · 내 맥에서만 동작, 서버 없음<br>
+<a href="README.md">English</a> · 한국어 · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a></p>
 
 ---
 
@@ -53,6 +54,8 @@ brew install --cask groothaha/tap/ctxgraph
 git clone https://github.com/groothaha/ctx-graph && cd ctx-graph
 ./build.sh            # → ~/Applications/CtxGraph.app
 ```
+
+빌드가 안 되면 개발 문서의 [Building](docs/DEVELOPMENT.md#building) (영어) 을 보세요.
 
 ## 처음 켜면
 

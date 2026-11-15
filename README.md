@@ -5,7 +5,8 @@
 <p align="center"><b>Wire your Claude Code conversations together.</b><br>
 Draw an arrow from A to B, and every message you send in B carries A's latest summary.</p>
 
-<p align="center">macOS 14+ · free & open source (MIT) · runs locally, no server · <a href="README.ko.md">한국어</a></p>
+<p align="center">macOS 14+ · free & open source (MIT) · runs locally, no server<br>
+English · <a href="README.ko.md">한국어</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a></p>
 
 ---
 
@@ -53,6 +54,8 @@ brew install --cask groothaha/tap/ctxgraph
 git clone https://github.com/groothaha/ctx-graph && cd ctx-graph
 ./build.sh            # → ~/Applications/CtxGraph.app
 ```
+
+If the build fails, see [Building](docs/DEVELOPMENT.md#building) in the development notes.
 
 ## First run
 
