@@ -48,20 +48,24 @@ Requires the Xcode Command Line Tools (Swift 5.9+). Xcode itself isn't needed.
 ./build.sh                 # release layout → ~/Applications/CtxGraph.app
 DEV=1 ./build.sh           # the app runs this checkout's bin/ directly (edits apply immediately — and the hooks point here)
 OUT=/tmp/x/CtxGraph.app ./build.sh    # build somewhere else
+./build.sh --check         # only check the prerequisites
 ```
+
+Before building, `build.sh` checks macOS 14+, the Command Line Tools (and offers to run `xcode-select --install` when it is run from a terminal), Swift 5.9+ and the Xcode license; it notes a missing Python 3.9+ or Claude Code, which the app needs at run time but the build doesn't. Messages are Korean when `LANG` is Korean. When the Swift toolchain changes it clears `app/.build` (the toolchain is recorded in `app/.build/.toolchain`), because a cache from another compiler fails with errors like *module compiled with Swift X cannot be imported*. Python is only used to regenerate the `.lproj` files; without it the committed ones are used.
 
 In the release layout the app unpacks `bin/` into `~/Library/Application Support/CtxGraph/bin` on launch (only when it changed), so the hook path stays the same when the app moves or updates. With `DEV=1`, `Info.plist` gets `CtxGraphSourceBin` pointing at this checkout.
 
-If the build fails:
+If the build still fails:
 
 | Symptom | Fix |
 |---|---|
 | `xcrun: error: invalid active developer path`, or `swift: command not found` | Install the Command Line Tools: `xcode-select --install` |
 | `package … is using Swift tools version 5.9.0 but the installed version is …` | Swift is older than 5.9. Update the Command Line Tools in System Settings → General → Software Update (or `softwareupdate --list`) |
 | `You have not agreed to the Xcode license agreements` | You have Xcode selected: `sudo xcodebuild -license accept`, or switch to the Command Line Tools with `sudo xcode-select -s /Library/Developer/CommandLineTools` |
+| `plugin for module 'SwiftUIMacros' not found`, followed by many `'self' is immutable` / `cannot find '$…' in scope` errors | With only the Command Line Tools, the newest SDK's SwiftUI makes `@State` a macro whose plugin ships only with Xcode (seen with CLT 27.2, Swift 6.4). `build.sh` retries with the older SDKs that are installed, newest first, and remembers the one that worked in `app/.build/.sdkroot`. If none works, install Xcode and `sudo xcode-select -s /Applications/Xcode.app`. To choose an SDK yourself: `SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk ./build.sh` |
 | The old app keeps running after a rebuild | `build.sh` replaces the bundle but doesn't restart it. Quit CtxGraph and open it again — terminal tabs keep running and reattach |
 
-The build needs no network: SwiftTerm is vendored in `app/Vendor/`. It builds with Swift 5.9 and with Swift 6.1 (CI, macOS 15).
+The build needs no network: SwiftTerm is vendored in `app/Vendor/`. CI builds it with Xcode 16.4 (Swift 6.1) and the newest Xcode on macOS 26 (Swift 6.3); it also builds with the Command Line Tools for Swift 5.9 and, through the SDK fallback above, 6.4. `build.sh` prints the compiler output only when the build fails.
 
 Python runtime: Homebrew's `python3`, then `/usr/local/bin`, then `/usr/bin/python3` *only if* `xcode-select -p` has a toolchain with Python (otherwise running it would pop up the developer-tools installer), then `~/.local/bin`. `CTXGRAPH_PYTHON` overrides.
 

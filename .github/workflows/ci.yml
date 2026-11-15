@@ -13,9 +13,9 @@ jobs:
       matrix:
         python: ["system", "3.13"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - if: matrix.python != 'system'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - name: Tests
@@ -25,18 +25,30 @@ jobs:
           cd tests && $PY -m unittest discover -s . -t . -v
 
   app:
-    runs-on: macos-15
+    # 기본 Xcode(macos-15) 와 가장 새 Xcode(macos-26) 둘 다로 빌드 — 새 SDK·Swift 에서 깨지는 걸 먼저 알게
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, xcode: default, l10n: true }
+          - { os: macos-26, xcode: newest, l10n: false }
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: Pick Xcode
+        if: matrix.xcode == 'newest'
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | grep -v -i beta | sort -V | tail -1)"
       - name: Build (release layout)
         run: |
           swift --version
+          ./build.sh --check
           OUT="$RUNNER_TEMP/CtxGraph.app" ./build.sh
           test -x "$RUNNER_TEMP/CtxGraph.app/Contents/MacOS/CtxGraph"
           test -f "$RUNNER_TEMP/CtxGraph.app/Contents/Resources/bin/ctxgraph.py"
           test -f "$RUNNER_TEMP/CtxGraph.app/Contents/Resources/Fonts/D2Coding.ttf"
           ! /usr/libexec/PlistBuddy -c "Print :CtxGraphSourceBin" "$RUNNER_TEMP/CtxGraph.app/Contents/Info.plist"
       - name: Translations
+        if: matrix.l10n
         run: |
           # 컴파일러가 뽑은 번역 키와 en.py 를 맞춰 본다 (빠진 번역·형식 지정자 불일치면 실패)
           cd app
